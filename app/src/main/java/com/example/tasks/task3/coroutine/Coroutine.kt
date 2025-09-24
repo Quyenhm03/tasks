@@ -6,10 +6,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.system.measureTimeMillis
 
 /*
@@ -19,90 +21,89 @@ import kotlin.system.measureTimeMillis
         Dispatcher (Dispatchers.Main, Dispatchers.IO)
         Scope (GlobalScope, CoroutineScope)
  */
-fun main() {
-//    demoLaunch()
-//    demoAsync()
-//    demoWithContext()
-//    demoCoroutineScope()
-//    demoException()
-}
+suspend fun main() {
+    val userRepo = UserRepository()
 
-suspend fun fetchUser(id: Int) : User {
-    val result = GlobalScope.async (Dispatchers.IO) {
-        delay(2000L)
-        User(id, "Nguyen Van A")
-    }
-    return result.await()
+    demoLaunch(userRepo)
+    demoAsync(userRepo)
+    demoCoroutineScopeCancel(userRepo)
+    demoGlobalScope(userRepo)
+    demoException()
 }
 
 fun showUsers(user1: User, user2: User) {
     println("$user1 - $user2")
 }
 
-fun demoLaunch() {
-    GlobalScope.launch {
-        delay(1000L)
-        println("World!")
+suspend fun demoLaunch(userRepo: UserRepository) = coroutineScope {
+    println("Starting demo on thread: ${Thread.currentThread().name}")
+
+    launch {
+        val user1 = userRepo.getUser(1)
+        println("Got $user1 on thread: ${Thread.currentThread().name}")
     }
-    println("Hello ")
-    Thread.sleep(2000L)
-}
 
-fun demoAsync() {
-    println("=== Demo Async ===")
-    val time = measureTimeMillis {
-        runBlocking {
-            launch {
-                println("Start job on ${Thread.currentThread().name}")
-
-                val userOne = async {
-                    fetchUser(1)
-                }
-                val userTwo = async {
-                    fetchUser(2)
-                }
-
-                // not waiting async results
-                println("End job")
-                // waiting async results
-                showUsers(userOne.await(), userTwo.await())
-            }
-        }
-    }
-    println("Demo Async took $time ms")
-}
-
-fun demoWithContext() {
-    println("=== Demo WithContext ===")
-    val time = measureTimeMillis {
-        runBlocking {
-            launch {
-                println("Start job on ${Thread.currentThread().name}")
-
-                val userOne = withContext(Dispatchers.IO) {
-                    fetchUser(1)
-                }
-                val userTwo = withContext(Dispatchers.IO) {
-                    fetchUser(2)
-                }
-
-                // after all withContext calls complete
-                println("End job")
-                showUsers(userOne, userTwo)
-            }
-        }
-    }
-    println("Demo WithContext took $time ms")
-}
-
-fun demoCoroutineScope() {
-    val customScope = CoroutineScope(Job() + Dispatchers.Default)
+    val customScope = CoroutineScope(Dispatchers.IO)
     customScope.launch {
-        println("Run on ${Thread.currentThread().name}")
-        val user = fetchUser(1)
-        println(user)
+        val user2 = userRepo.getUser(2)
+        println("Got $user2 on thread: ${Thread.currentThread().name}")
     }
-    Thread.sleep(3000L)
+
+    println("Demo completed on thread: ${Thread.currentThread().name}")
+}
+
+suspend fun demoAsync(userRepo: UserRepository) = coroutineScope {
+    val time = measureTimeMillis {
+        val user1 = async {
+            userRepo.getUser(1)
+        }
+        val user2 = async {
+            userRepo.getUser(2)
+        }
+
+        showUsers(user1.await(), user2.await())
+    }
+
+    println("Completed in $time ms")
+}
+
+suspend fun demoCoroutineScopeCancel(userRepo: UserRepository) = coroutineScope {
+    val jobParent = launch {
+        launch {
+            delay(100)
+            println("Child of the jobParent coroutine")
+
+            val user = userRepo.getUser(4)
+            println("Got $user in child coroutine on thread: ${Thread.currentThread().name}")
+            delay(1000)
+            println("jobChildren will not execute this line if my parent request is cancelled")
+        }
+    }
+    delay(1000)
+    jobParent.cancel()
+    println("Parent coroutine cancelled")
+}
+
+suspend fun demoGlobalScope(userRepo: UserRepository) = coroutineScope {
+    val jobParent = launch {
+        GlobalScope.launch {
+            delay(100)
+            println("job1: GlobalScope and execute independently!")
+
+            val user = userRepo.getUser(4)
+            println("Got $user in child coroutine on thread: ${Thread.currentThread().name}")
+        }
+
+        launch {
+            delay(100)
+            println("job2: Child of the request coroutine")
+            delay(1000)
+            println("job2 will not execute this line if jobParent is cancelled")
+        }
+    }
+    delay(500)
+    jobParent.cancel()
+    delay(2000)
 }
 
 val handler = CoroutineExceptionHandler {
@@ -142,19 +143,3 @@ fun demoException() = runBlocking {
     job2.join()
 }
 
-fun nomalFunction() {
-    Thread.sleep(2000L)
-}
-
-suspend fun suspendFunc() {
-    GlobalScope.launch {
-        delay(1000L)
-        println("World!")
-    }
-    println("Hello ")
-    Thread.sleep(2000L)
-}
-
-fun test() {
-
-}
