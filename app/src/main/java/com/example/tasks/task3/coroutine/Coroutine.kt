@@ -11,6 +11,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.system.measureTimeMillis
 
@@ -29,6 +31,8 @@ suspend fun main() {
     demoCoroutineScopeCancel(userRepo)
     demoGlobalScope(userRepo)
     demoException()
+    demoWithContext(userRepo)
+    demoTimeout()
 }
 
 fun showUsers(user1: User, user2: User) {
@@ -143,3 +147,43 @@ fun demoException() = runBlocking {
     job2.join()
 }
 
+suspend fun demoWithContext(userRepo: UserRepository) {
+    val time = measureTimeMillis {
+        coroutineScope {
+            launch {
+                println("Start job on ${Thread.currentThread().name}")
+
+                val user1 = withContext(Dispatchers.IO) {
+                    userRepo.getUser(1)
+                }
+                val user2 = withContext(Dispatchers.IO) {
+                    userRepo.getUser(2)
+                }
+
+                println("End job")
+                showUsers(user1, user2)
+            }
+        }
+    }
+    println("Demo WithContext took $time ms")
+}
+
+suspend fun demoTimeout() {
+    try {
+        withTimeout(1500) {
+            repeat(5) { i ->
+                delay(500)
+                println("Working... ${i + 1}")
+            }
+        }
+    } catch (e: Exception) {
+        println("Timeout! Operation cancelled")
+    }
+
+    // withTimeoutOrNull - not throw exception
+    val result = withTimeoutOrNull(800) {
+        delay(1000)
+        "Completed!"
+    }
+    println("Result with timeout: $result")
+}

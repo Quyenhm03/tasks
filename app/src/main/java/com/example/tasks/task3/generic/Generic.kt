@@ -1,4 +1,9 @@
-package com.example.tasks.task3
+package com.example.tasks.task3.generic
+
+import com.example.tasks.task3.generic.person.Father
+import com.example.tasks.task3.generic.person.Son
+import com.example.tasks.task3.generic.plant.Flower
+import com.example.tasks.task3.generic.plant.Fruit
 
 fun main() {
     demoGeneric()
@@ -16,9 +21,6 @@ fun <T> createInstance(obj: T) : T {
     return obj
 }
 
-data class Flower(val name: String = "Rose")
-data class Fruit(val name: String = "Orange", val price: Double = 10.0)
-
 fun demoGeneric() {
     val rose = Repository<Flower>()
     rose.insert(Flower())
@@ -29,9 +31,6 @@ fun demoGeneric() {
     val peachBlossom = createInstance(Flower("Peach blossom"))
     println(peachBlossom.toString())
 }
-
-open class Father(val name: String, val age: Int)
-class Son(name: String, age: Int) : Father(name, age)
 
 class Person1<out T> (val value: T) {
     fun get() : T {

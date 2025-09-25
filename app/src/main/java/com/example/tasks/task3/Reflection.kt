@@ -22,6 +22,13 @@ fun isPositiveNumber(s: String ) = s == "abc" || s == "def"
 
 class Person(val name: String)
 
+fun<A, B, C> compose(f: (B) -> C, g: (A) -> B) : (A) -> C {
+    return { x -> f(g(x))}
+}
+
+fun isEven(x: Int) = (x % 2 == 0)
+fun length(s: String) = s.length
+
 fun demoReflectFunction() {
     val numbers = listOf(-5, 0, 8, 6, -3, 2)
     println(numbers.filter(::isPositiveNumber).sorted())
@@ -35,4 +42,8 @@ fun demoReflectFunction() {
 
     val p1: (String) -> Person = ::Person
     println(p1("Nguyen Van B").name)
+
+    val listStr = listOf("ntq", "d21cnpm", "haizz", "jvbert")
+    val evenLength = compose(::isEven, ::length)
+    println(listStr.filter(evenLength))
 }

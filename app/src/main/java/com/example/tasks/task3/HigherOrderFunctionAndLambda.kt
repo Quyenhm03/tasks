@@ -10,6 +10,10 @@ package com.example.tasks.task3
 fun main() {
     demoFunctionIsParameter()
     demoLambdaExpression()
+
+    // demo return a function
+    println("Sum: ${demoReturnFunction()(6,3)}")
+
     demoInlineFunction()
 }
 
@@ -20,8 +24,12 @@ fun demoFunctionIsParameter() {
 }
 
 fun demoLambdaExpression() {
-    val result1 = calculate(5, 3) {
-        a, b : Int -> a - b
+    val result1 = calculate(5, 3) { a, b : Int ->
+        if (a > b) {
+            a - b
+        } else {
+            b - a
+        }
     }
     println("Subtract: $result1")
 
@@ -29,6 +37,13 @@ fun demoLambdaExpression() {
         a, b -> a * b
     }
     println("Multiply: $result2")
+
+    val lambda : (Int, Int) -> Double = {a, b -> (a / b).toDouble() }
+    println("Division: ${lambda(5,3)}")
+}
+
+fun demoReturnFunction() : ((Int, Int) -> Int) {
+    return ::sum
 }
 
 fun demoInlineFunction() {
